@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="custom_paper_remito" model="report.paperformat">
+            <field name="name">custom paper format</field>
+            <field name="default" eval="True"/>
+            <field name="format">A4</field>
+            <field name="orientation">Portrait</field>
+            <field name="margin_top">80</field>
+            <field name="margin_bottom">50</field>
+            <field name="margin_left">3</field>
+            <field name="margin_right">3</field>
+            <field name="header_line" eval="False"/>
+            <field name="dpi">90</field>
+        </record>
+
+        <record id="action_report_remito" model="ir.actions.report">
+            <field name="name">Remito</field>
+            <field name="model">stock.picking</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">dx_auron_reports.report_template_remito</field>
+            <field name="report_file">dx_auron_reports.report_template_remito</field>
+            <field name="binding_model_id" ref="stock.model_stock_picking"/>
+            <field name="binding_type">report</field>
+            <field name="paperformat_id" ref="custom_paper_remito"/>
+        </record>
+
+        <template id="dx_auron_reports.report_template_remito">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-call="web.basic_layout">
+                        <div class="header">
+                            <div name="divgeneral">
+                                <div style="float: left; width: 50%;">
+                                    <div class="oe_structure row">
+                                        <div t-if="o.partner_id" class="col-auto" name="div_name">
+                                            <strong>Razón Social:</strong>
+                                            <span t-field="o.partner_id.name"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div t-if="o.partner_id.vat" class="col-auto" name="div_cuit">
+                                            <strong>C.U.I.T:</strong>
+                                            <span t-field="o.partner_id.vat"/>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div t-if="o.partner_id.l10n_ar_afip_responsibility_type_id" class="col-auto"
+                                             name="div_cuit">
+                                            <strong>Condicion frente al IVA:</strong>
+                                            <span t-field="o.partner_id.l10n_ar_afip_responsibility_type_id"/>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div t-if="o.partner_id.contact_address_complete" class="col-auto"
+                                             name="div_address">
+                                            <strong>Domicilio Comercial:</strong>
+                                            <span t-field="o.partner_id.contact_address_complete"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="float: right; width: 50%;">
+                                    <div class="row">
+                                        <div t-if="o.origin" class="col-auto" name="div_origin"
+                                             style="text-align: right;">
+                                            <strong>Orden:</strong>
+                                            <span t-field="o.origin" style="font-weight: normal;"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-auto" name="div_sched_date" style="text-align: right;">
+                                            <strong>Fecha Prevista:</strong>
+                                            <span t-field="o.scheduled_date" style="font-weight: normal;"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="page">
+                            <table class="table table-sm" t-if="o.move_line_ids and o.move_ids_without_package">
+                                <t t-set="has_barcode"
+                                   t-value="any(move_line.product_id and move_line.product_id.sudo().barcode or move_line.package_id for move_line in o.move_line_ids)"/>
+                                <t t-set="has_serial_number"
+                                   t-value="any(move_line.lot_id or move_line.lot_name for move_line in o.move_line_ids)"
+                                   groups="stock.group_production_lot"/>
+                                <thead>
+                                    <tr style="background-color: #808080;">
+                                        <th name="th_product">
+                                            <strong>Descripción</strong>
+                                        </th>
+                                        <th style="max-width: 50px;">
+                                            <strong>Cantidad</strong>
+                                        </th>
+                                        <th>
+                                            <strong>Despacho</strong>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="o.move_ids_without_package" t-as="lo">
+                                        <tr>
+                                            <td class="text-start" style="max-width: 130px;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
+                                                <span t-field="lo.product_id.display_name"/>
+                                                <span t-field="lo.product_id.description_picking"/>
+                                            </td>
+                                            <td name="td_quantity" class="text-start" style="max-width: 20px;">
+                                                <span t-field="lo.product_packaging_qty"/>
+                                                -
+                                                <span t-field="lo.product_packaging_id.name"/>
+                                                -
+                                                <span t-esc="int(lo.product_uom_qty)"/>
+                                            </td>
+                                            <td class="text-center" style="max-width: 50px;">
+                                                <span t-field="lo.origin_dispatch_product"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            <table class="table table-sm"
+                                   t-if="o.package_level_ids and o.picking_type_entire_packs and o.state in ['assigned', 'done']">
+                                <thead>
+                                    <tr>
+                                        <th name="th_package">Package</th>
+                                        <th name="th_pko_from" t-if="o.picking_type_id.code != 'incoming'"
+                                            groups="stock.group_stock_multi_locations">From
+                                        </th>
+                                        <th name="th_pki_from" t-if="o.picking_type_id.code != 'outgoing'"
+                                            groups="stock.group_stock_multi_locations">To
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="o.package_level_ids.sorted(key=lambda p: p.package_id.name)"
+                                        t-as="package">
+                                        <t t-set="package" t-value="package.with_context(picking_id=o.id)"/>
+                                        <td name="td_pk_barcode">
+                                            <div t-field="package.package_id.name"
+                                                 t-options="{'widget': 'barcode', 'humanreadable': 1, 'width': 600, 'height': 100, 'img_style': 'width:300px;height:50px;margin-left: -50px;'}"/>
+                                            <br/>
+                                        </td>
+                                        <td t-if="o.picking_type_id.code != 'incoming'"
+                                            groups="stock.group_stock_multi_locations">
+                                            <span t-field="package.location_id"/>
+                                        </td>
+                                        <td t-if="o.picking_type_id.code != 'outgoing'"
+                                            groups="stock.group_stock_multi_locations">
+                                            <span t-field="package.location_dest_id"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="footer">
+                            <t t-set="cant_pack"
+                               t-value="sum(move.product_packaging_qty for move in o.move_ids_without_package)"/>
+                            <p t-if="o.partner_id.carrier">
+                                <strong>Transportista:</strong>
+                                <span t-field="o.partner_id.carrier" class="text-muted"/>
+                            </p>
+                            <p t-if="o.partner_id.address_carrier">
+                                <span t-field="o.partner_id.address_carrier" class="text-muted"/>
+                            </p>
+                            <p>
+                                <strong>Cantidad de Bultos:</strong>
+                                <span t-out="cant_pack" class="text-muted"/>
+                            </p>
+                             <p>
+                                 Hoja: <span class="page text-muted"/> / <span class="topage text-muted"/>
+                             </p>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+
+    </data>
+</odoo>

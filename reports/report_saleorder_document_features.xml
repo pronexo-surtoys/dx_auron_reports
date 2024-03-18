@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <template id="report_quotation_inherit_demo" inherit_id="sale.report_saleorder_document">
+
+            <!--Quitar unidades de la cantidad-->
+            <xpath expr="//td[@name='td_quantity']" position="replace">
+                <td name="td_quantity" class="text-start">
+                    <span t-field="line.product_packaging_qty"/>
+                    -
+                    <span t-field="line.product_packaging_id.name"/>
+                    -
+                    <span t-esc="int(line.product_uom_qty)"/>
+                </td>
+            </xpath>
+
+            <xpath expr="//th[@name='th_quantity']" position="attributes">
+                <attribute name="class">text-center</attribute>
+            </xpath>
+
+            <!--Quitar precio unitario-->
+            <xpath expr="//th[@name='th_priceunit']" position="attributes">
+                <attribute name="style">display: none</attribute>
+            </xpath>
+            <xpath expr="//td[@name='td_priceunit']" position="attributes">
+                <attribute name="style">display: none</attribute>
+            </xpath>
+
+            <!--Agregar el precio final-->
+            <xpath expr="//th[@name='th_quantity']" position="after">
+                <th name="th_price_reduce" class="text-end">Precio</th>
+            </xpath>
+            <xpath expr="//td[@name='td_quantity']" position="after">
+                <td name="td_price_reduce" class="text-end">
+                    <span t-field="line.price_reduce"/>
+                </td>
+            </xpath>
+
+            <!--Quitar descuento-->
+            <!--            <t t-set="display_discount" t-value="any(l.discount for l in lines_to_report)"/>-->
+            <xpath expr="//t[@t-set='display_discount']" position="replace">
+                <t t-set="display_discount" t-value="False"/>
+            </xpath>
+
+            <!--Quitar la tabla de abajo solo dejar el total-->
+            <xpath expr="//div[@name='so_total_summary']" position="replace">
+
+                <div class="clearfix" name="so_total_summary">
+                    <div id="total" class="row" name="total">
+                        <div t-attf-class="#{'col-6' if report_type != 'html' else 'col-sm-7 col-md-6'} ms-auto">
+                            <table class="table table-sm table-borderless">
+                                <!--                                Tax totals-->
+                                <t t-set="tax_totals" t-value="doc.tax_totals"/>
+                                <t t-call="dx_auron_reports.document_tax_totals_extended"/>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </xpath>
+
+            <xpath expr="//th[@name='th_price_reduce']" position="after">
+                <th name="th_amoun_tra" class="text-end">Importe</th>
+            </xpath>
+
+            <xpath expr="//th[@name='th_subtotal']" position="attributes">
+                <attribute name="style">display: none</attribute>
+            </xpath>
+
+
+        </template>
+
+        <template id="document_tax_totals_extended">
+            <!--Total amount with all taxes-->
+            <tr class="border-black o_total">
+                <td>
+                    <strong>Total</strong>
+                </td>
+                <td class="text-end">
+                    <span t-esc="tax_totals['formatted_amount_total_rounded']"
+                          t-if="'formatted_amount_total_rounded' in tax_totals"/>
+                    <span t-esc="tax_totals['formatted_amount_total']" t-else=""/>
+                </td>
+            </tr>
+        </template>
+
+
+        <!--Poner Vendedor por Comercial-->
+        <template id="l10n_ar_sale_extended" inherit_id="l10n_ar_sale.report_saleorder_document">
+            <xpath expr="//t[@t-if='doc.user_id']" position="replace">
+                <t t-if="doc.user_id">
+                    <strong>Vendedor:</strong>
+                    <span t-field="doc.sale_agent_id"/>
+                </t>
+            </xpath>
+
+            <xpath expr="//td[@name='td_taxes']" position="attributes">
+                <attribute name="style">display: none</attribute>
+            </xpath>
+
+            <xpath expr="//th[@name='th_taxes']" position="attributes">
+                <attribute name="style">display: none</attribute>
+            </xpath>
+
+        </template>
+
+        <record id="paperformat_margen" model="report.paperformat">
+            <field name="name">A4</field>
+            <field name="default" eval="True" />
+            <field name="format">A4</field>
+            <field name="page_height">0</field>
+            <field name="page_width">0</field>
+            <field name="orientation">Portrait</field>
+            <field name="margin_top">45</field>
+            <field name="margin_bottom">45</field>
+            <field name="margin_left">7</field>
+            <field name="margin_right">7</field>
+            <field name="header_line" eval="False" />
+            <field name="header_spacing">40</field>
+            <field name="dpi">90</field>
+        </record>
+
+        <record id="sale.action_report_saleorder" model="ir.actions.report">
+            <field name="paperformat_id" ref="paperformat_margen"/>
+        </record>
+
+    </data>
+</odoo>
